@@ -59,8 +59,13 @@ def generate_test_case(data, name, indentation):
     elif isinstance(data, dict):
         for key, value in data.items():            
             if isinstance(value, dict):
-                test_case += f'{indentation}pm.test("{name}.{key} is an object", function () {{\n'
+                test_case += f'{indentation}pm.test("{name}.{key} is an object", function () {{\n'    
+                indentation += '\t'
+                test_case += f'{indentation}pm.expect({name}.{key},"{name}.{key} should be an object or null").to.satisfy((value) =>{{ return nullOrObject(value); }});\n'           
+                test_case += f'{indentation}if ({name}.{key} != null) {{\n' # if not null
                 test_case += generate_test_case(value, f'{name}.{key}', indentation)
+                test_case += f'{indentation}}}\n' # end if
+                indentation = indentation[: -len('\t')] # remove the last \t
                 test_case += f'{indentation}}});\n'
             elif isinstance(value, list):
                 test_case += generate_test_case(value, f'{name}.{key}', indentation)
