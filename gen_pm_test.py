@@ -45,7 +45,15 @@ def isDateField(key):
     return key.endswith('On') or key.endswith('Date') or key.endswith('Until')
 
 def isNumberField(key):
-    return key.endswith('Id') or key.endswith('id') or key.endswith('By') or key.endswith('Amount') or key.endswith('Total')
+    return key.endswith('Id') or key.endswith('id') or key == 'mc' or key.endswith('By') or key.endswith('Amount') or key.endswith('Total')
+
+def isStringField(key):
+    key_list = ["name", "mobile", "phone", "email", "address", "note", "content", "desc"]
+    for name in key:
+        if name in key.lower():
+            return True
+        else:
+            return False
 
 def generate_test_case(data, name, indentation):
     indentation += '\t'
@@ -61,8 +69,9 @@ def generate_test_case(data, name, indentation):
             if isinstance(value, dict):
                 test_case += f'{indentation}pm.test("{name}.{key} is an object", function () {{\n'    
                 indentation += '\t'
-                test_case += f'{indentation}pm.expect({name}.{key},"{name}.{key} should be an object or null").to.satisfy((value) =>{{ return nullOrObject(value); }});\n'           
-                test_case += f'{indentation}if ({name}.{key} != null) {{\n' # if not null
+                # object could be a number when @JsonIdentityReference is used
+                test_case += f'{indentation}pm.expect({name}.{key},"{name}.{key} should be an object, number or null").to.satisfy((value) =>{{ return nullOrObject(value) || nullOrNumber(value); }});\n'           
+                test_case += f'{indentation}if (typeof {name}.{key} === "object") {{\n'
                 test_case += generate_test_case(value, f'{name}.{key}', indentation)
                 test_case += f'{indentation}}}\n' # end if
                 indentation = indentation[: -len('\t')] # remove the last \t
@@ -75,6 +84,8 @@ def generate_test_case(data, name, indentation):
                         test_case += f'{indentation}pm.expect({name}.{key}, "{name}.{key} should be a date or null").to.satisfy((value) => {{ return nullOrDate(value); }});\n'
                     elif isNumberField(key):
                         test_case += f'{indentation}pm.expect({name}.{key}, "{name}.{key} should be a number or null").to.satisfy((value) => {{ return nullOrNumber(value); }});\n'  
+                    elif isStringField(key):
+                        test_case += f'{indentation}pm.expect({name}.{key}, "{name}.{key} should be a string or null").to.satisfy((value) => {{ return nullOrString(value); }});\n'  
                     else: # Assume it's an object otherwise
                         test_case += f'{indentation}pm.expect({name}.{key}, "{name}.{key} should be an object or null").to.satisfy((value) => {{ return nullOrObject(value); }});\n'  
                 elif isinstance(value, str):
